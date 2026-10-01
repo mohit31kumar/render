@@ -229,19 +229,75 @@ export default function Logs() {
   const hasMore = !live && (logsData?.hasMore ?? false)
 
   const highlight = (message: string) => {
-    const parts = message.split(/(ERROR|WARN|INFO|FATAL|500|502|503|504)/gi)
+    const stripped = message.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '')
+    const httpStatusColor = (code: string) => {
+      const num = Number(code)
+      if (num >= 500) return 'text-red-400'
+      if (num >= 400) return 'text-orange-400'
+      if (num >= 300) return 'text-yellow-400'
+      if (num >= 200) return 'text-green-400'
+      return 'text-gray-300'
+    }
+    const parts = stripped.split(/(ERROR|WARN|INFO|FATAL|DEBUG|500|502|503|504|[1-9]\d{2})/gi)
     return parts.map((part, i) => {
       if (['ERROR', 'FATAL', '500', '502', '503', '504'].includes(part)) {
-        return <span key={i} className="text-red-400">{part}</span>
+        return <span key={i} className="text-red-400 font-semibold">{part}</span>
       }
       if (part === 'WARN') {
-        return <span key={i} className="text-yellow-400">{part}</span>
+        return <span key={i} className="text-yellow-400 font-semibold">{part}</span>
       }
       if (part === 'INFO') {
-        return <span key={i} className="text-blue-400">{part}</span>
+        return <span key={i} className="text-blue-400 font-semibold">{part}</span>
+      }
+      if (part === 'DEBUG') {
+        return <span key={i} className="text-gray-400">{part}</span>
+      }
+      if (/^[1-9]\d{2}$/.test(part)) {
+        return <span key={i} className={httpStatusColor(part)}>{part}</span>
       }
       return <span key={i} className="text-gray-300">{part}</span>
     })
+  }
+
+  const levelClass: Record<string, string> = {
+    error: 'bg-red-500/20 text-red-300 border-red-500/30',
+    fatal: 'bg-red-500/20 text-red-300 border-red-500/30',
+    warn: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    warning: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    info: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    debug: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+    default: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+  }
+
+  const typeIndicator: Record<string, string> = {
+    app: 'bg-blue-500/10 text-blue-300',
+    build: 'bg-purple-500/10 text-purple-300',
+    request: 'bg-emerald-500/10 text-emerald-300',
+  }
+
+  const logTypeLabel = (log: LogEntry) => {
+    const typeLabel = log.labels.find((l) => l.name === 'type')?.value ?? 'app'
+    const statusCode = log.labels.find((l) => l.name === 'statusCode')?.value
+    const method = log.labels.find((l) => l.name === 'method')?.value
+    if (typeLabel === 'request' && statusCode) {
+      const num = Number(statusCode)
+      let color = 'text-gray-300'
+      if (num >= 500) color = 'text-red-400'
+      else if (num >= 400) color = 'text-orange-400'
+      else if (num >= 300) color = 'text-yellow-400'
+      else if (num >= 200) color = 'text-green-400'
+      return (
+        <span className="text-xs">
+          {method && <span className="mr-1 text-gray-400">{method}</span>}
+          <span className={color}>{statusCode}</span>
+        </span>
+      )
+    }
+    return (
+      <span className={`text-xs ${typeIndicator[typeLabel] ?? 'text-gray-400'}`}>
+        {typeLabel}
+      </span>
+    )
   }
 
   return (
@@ -402,27 +458,39 @@ export default function Logs() {
       <div
         id="log-container"
         onScroll={handleScroll}
-        className="mt-4 h-[600px] overflow-y-auto rounded-lg border border-gray-800 bg-gray-900 p-4 font-mono"
+        className="mt-4 h-[600px] overflow-y-auto rounded-lg border border-gray-800 bg-gray-900 font-mono"
       >
-        {!resource ? (
-          <p className="text-xs text-gray-500">Select a service to view logs.</p>
-        ) : logs.length === 0 ? (
-          <p className="text-xs text-gray-500">No logs found.</p>
-        ) : null}
-        {!paused &&
-          resource &&
-          logs.map((log) => {
-            const levelLabel = log.labels.find((l) => l.name === 'level')?.value ?? 'info'
-            const time = new Date(log.timestamp).toLocaleTimeString()
-            return (
-              <div key={log.id} className="flex gap-3 border-b border-gray-800/50 py-1 text-xs">
-                <span className="w-20 shrink-0 text-gray-500">{time}</span>
-                <span className="w-10 shrink-0 text-gray-500">{levelLabel.toUpperCase().slice(0, 5)}</span>
-                <span className="flex-1 break-all text-gray-300">{highlight(log.message)}</span>
-              </div>
-            )
-          })}
-        <div ref={bottomRef} />
+        <div className="sticky top-0 z-10 flex gap-3 border-b border-gray-800 bg-gray-900/95 px-4 py-2 text-[10px] font-medium uppercase tracking-wider text-gray-500 backdrop-blur">
+          <span className="w-20 shrink-0">Time</span>
+          <span className="w-10 shrink-0">Level</span>
+          <span className="w-28 shrink-0">Type</span>
+          <span className="flex-1">Message</span>
+        </div>
+        <div className="p-4">
+          {!resource ? (
+            <p className="text-xs text-gray-500">Select a service to view logs.</p>
+          ) : logs.length === 0 ? (
+            <p className="text-xs text-gray-500">No logs found.</p>
+          ) : null}
+          {!paused &&
+            resource &&
+            logs.map((log) => {
+              const levelLabel = log.labels.find((l) => l.name === 'level')?.value ?? 'info'
+              const time = new Date(log.timestamp).toLocaleTimeString()
+              const badgeClass = levelClass[levelLabel] ?? levelClass.default
+              return (
+                <div key={log.id} className="flex gap-3 border-b border-gray-800/50 py-1.5 text-xs hover:bg-gray-800/30">
+                  <span className="w-20 shrink-0 text-gray-500">{time}</span>
+                  <span className={`w-10 shrink-0 rounded border px-1 py-0.5 text-center text-[10px] font-medium ${badgeClass}`}>
+                    {levelLabel.toUpperCase().slice(0, 5)}
+                  </span>
+                  <span className="w-28 shrink-0">{logTypeLabel(log)}</span>
+                  <span className="flex-1 break-all">{highlight(log.message)}</span>
+                </div>
+              )
+            })}
+          <div ref={bottomRef} />
+        </div>
       </div>
     </div>
   )
