@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
 import { get, createLogStreamUrl } from '../api'
 import { Play, Pause, Trash2, Circle } from 'lucide-react'
+import { Button } from '../components/ui/Button'
+import { Select } from '../components/ui/Input'
+import { Badge } from '../components/ui/Badge'
 
 type LogEntry = {
   id: string
@@ -63,6 +66,21 @@ function applyPreset(preset: RangePreset): { startTime: string; endTime: string 
     startTime: toIso(start),
     endTime: end,
   }
+}
+
+const levelBadgeVariant = (level: string): 'danger' | 'warning' | 'info' | 'default' => {
+  const l = level.toLowerCase()
+  if (['error', 'fatal'].includes(l)) return 'danger'
+  if (['warn', 'warning'].includes(l)) return 'warning'
+  if (['info'].includes(l)) return 'info'
+  return 'default'
+}
+
+const typeBadgeVariant = (type: string): 'info' | 'success' | 'warning' | 'default' => {
+  if (type === 'app') return 'info'
+  if (type === 'build') return 'warning'
+  if (type === 'request') return 'success'
+  return 'default'
 }
 
 export default function Logs() {
@@ -182,7 +200,6 @@ export default function Logs() {
     setPageToken(null)
 
     if (preset === 'custom') {
-      // keep current manual values; user will edit them directly
       return
     }
 
@@ -220,8 +237,8 @@ export default function Logs() {
 
   function handleScroll() {
     if (bottomRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = document.getElementById('log-container')!
-      autoScrollRef.current = scrollTop + clientHeight >= scrollHeight - 40
+      const el = document.getElementById('log-container')!
+      autoScrollRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 40
     }
   }
 
@@ -232,47 +249,41 @@ export default function Logs() {
     const stripped = message.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '')
     const httpStatusColor = (code: string) => {
       const num = Number(code)
-      if (num >= 500) return 'text-red-400'
+      if (num >= 500) return 'text-danger'
       if (num >= 400) return 'text-orange-400'
-      if (num >= 300) return 'text-yellow-400'
-      if (num >= 200) return 'text-green-400'
-      return 'text-gray-300'
+      if (num >= 300) return 'text-warning'
+      if (num >= 200) return 'text-success'
+      return 'text-text-secondary'
     }
     const parts = stripped.split(/(ERROR|WARN|INFO|FATAL|DEBUG|500|502|503|504|[1-9]\d{2})/gi)
     return parts.map((part, i) => {
       if (['ERROR', 'FATAL', '500', '502', '503', '504'].includes(part)) {
-        return <span key={i} className="text-red-400 font-semibold">{part}</span>
+        return <span key={i} className="text-danger font-semibold">{part}</span>
       }
       if (part === 'WARN') {
-        return <span key={i} className="text-yellow-400 font-semibold">{part}</span>
+        return <span key={i} className="text-warning font-semibold">{part}</span>
       }
       if (part === 'INFO') {
-        return <span key={i} className="text-blue-400 font-semibold">{part}</span>
+        return <span key={i} className="text-info font-semibold">{part}</span>
       }
       if (part === 'DEBUG') {
-        return <span key={i} className="text-gray-400">{part}</span>
+        return <span key={i} className="text-text-disabled">{part}</span>
       }
       if (/^[1-9]\d{2}$/.test(part)) {
         return <span key={i} className={httpStatusColor(part)}>{part}</span>
       }
-      return <span key={i} className="text-gray-300">{part}</span>
+      return <span key={i} className="text-text-secondary">{part}</span>
     })
   }
 
-  const levelClass: Record<string, string> = {
-    error: 'bg-red-500/20 text-red-300 border-red-500/30',
-    fatal: 'bg-red-500/20 text-red-300 border-red-500/30',
-    warn: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-    warning: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-    info: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-    debug: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
-    default: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
-  }
-
-  const typeIndicator: Record<string, string> = {
-    app: 'bg-blue-500/10 text-blue-300',
-    build: 'bg-purple-500/10 text-purple-300',
-    request: 'bg-emerald-500/10 text-emerald-300',
+  const levelClass: Record<string, 'danger' | 'warning' | 'info' | 'default'> = {
+    error: 'danger',
+    fatal: 'danger',
+    warn: 'warning',
+    warning: 'warning',
+    info: 'info',
+    debug: 'default',
+    default: 'default',
   }
 
   const logTypeLabel = (log: LogEntry) => {
@@ -281,54 +292,46 @@ export default function Logs() {
     const method = log.labels.find((l) => l.name === 'method')?.value
     if (typeLabel === 'request' && statusCode) {
       const num = Number(statusCode)
-      let color = 'text-gray-300'
-      if (num >= 500) color = 'text-red-400'
+      let color = 'text-text-secondary'
+      if (num >= 500) color = 'text-danger'
       else if (num >= 400) color = 'text-orange-400'
-      else if (num >= 300) color = 'text-yellow-400'
-      else if (num >= 200) color = 'text-green-400'
+      else if (num >= 300) color = 'text-warning'
+      else if (num >= 200) color = 'text-success'
       return (
         <span className="text-xs">
-          {method && <span className="mr-1 text-gray-400">{method}</span>}
+          {method && <span className="mr-1 text-text-muted">{method}</span>}
           <span className={color}>{statusCode}</span>
         </span>
       )
     }
     return (
-      <span className={`text-xs ${typeIndicator[typeLabel] ?? 'text-gray-400'}`}>
+      <span className={`text-xs ${typeLabel === 'app' ? 'text-info' : typeLabel === 'build' ? 'text-warning' : 'text-success'}`}>
         {typeLabel}
       </span>
     )
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="page-container">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-100">Logs</h2>
+        <h2 className="page-title">Logs</h2>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant={live ? 'danger' : 'primary'}
+            size="sm"
             onClick={toggleLive}
-            className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-xs ${
-              live ? 'bg-red-900 text-red-200' : 'bg-green-900 text-green-200'
-            }`}
+            icon={<Circle size={12} />}
           >
-            <Circle size={12} className={live ? 'fill-red-400 text-red-400' : 'fill-green-400 text-green-400'} />
             {live ? 'Stop Live' : 'Live'}
-          </button>
+          </Button>
           {live && (
             <>
-              <button
-                onClick={() => setPaused(!paused)}
-                className="flex items-center gap-1 rounded-md bg-gray-800 px-3 py-1.5 text-xs text-gray-300"
-              >
-                {paused ? <Play size={12} /> : <Pause size={12} />}
+              <Button variant="secondary" size="sm" onClick={() => setPaused(!paused)} icon={paused ? <Play size={12} /> : <Pause size={12} />}>
                 {paused ? 'Resume' : 'Pause'}
-              </button>
-              <button
-                onClick={clearLogs}
-                className="flex items-center gap-1 rounded-md bg-gray-800 px-3 py-1.5 text-xs text-gray-300"
-              >
-                <Trash2 size={12} /> Clear
-              </button>
+              </Button>
+              <Button variant="secondary" size="sm" onClick={clearLogs} icon={<Trash2 size={12} />}>
+                Clear
+              </Button>
             </>
           )}
         </div>
@@ -336,156 +339,121 @@ export default function Logs() {
 
       <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-6">
         <div className="md:col-span-2">
-          <label className="text-xs text-gray-500">Service</label>
-          <select
-            value={resource}
-            onChange={(e) => setResource(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs text-gray-200 outline-none"
-          >
+          <label className="form-label">Service</label>
+          <Select value={resource} onChange={(e) => setResource(e.target.value)}>
             <option value="">All services</option>
             {services?.map(({ service }) => (
               <option key={service.id} value={service.id}>
                 {service.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
-          <label className="text-xs text-gray-500">Type</label>
-          <select
-            value={logType}
-            onChange={(e) => setLogType(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs text-gray-200 outline-none"
-          >
+          <label className="form-label">Type</label>
+          <Select value={logType} onChange={(e) => setLogType(e.target.value)}>
             <option value="">All</option>
             {logTypes?.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
-          <label className="text-xs text-gray-500">Level</label>
-          <select
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs text-gray-200 outline-none"
-          >
+          <label className="form-label">Level</label>
+          <Select value={level} onChange={(e) => setLevel(e.target.value)}>
             <option value="">All</option>
             {logLevels?.map((l) => (
               <option key={l} value={l}>{l}</option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
-          <label className="text-xs text-gray-500">Direction</label>
-          <select
-            value={direction}
-            onChange={(e) => setDirection(e.target.value as 'backward' | 'forward')}
-            className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs text-gray-200 outline-none"
-          >
+          <label className="form-label">Direction</label>
+          <Select value={direction} onChange={(e) => setDirection(e.target.value as 'backward' | 'forward')}>
             <option value="backward">Newest first</option>
             <option value="forward">Oldest first</option>
-          </select>
+          </Select>
         </div>
         <div>
-          <label className="text-xs text-gray-500">Time range</label>
-          <select
-            value={rangePreset}
-            onChange={(e) => handlePresetChange(e.target.value as RangePreset)}
-            className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs text-gray-200 outline-none"
-          >
+          <label className="form-label">Time range</label>
+          <Select value={rangePreset} onChange={(e) => handlePresetChange(e.target.value as RangePreset)}>
             {RANGE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
-          <label className="text-xs text-gray-500">Start time</label>
+          <label className="form-label">Start time</label>
           <input
             type="text"
             value={startTime}
             onChange={(e) => handleManualStartChange(e.target.value)}
             placeholder="2024-01-01T00:00:00Z"
-            className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs text-gray-200 outline-none"
+            className="form-input"
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500">End time</label>
+          <label className="form-label">End time</label>
           <input
             type="text"
             value={endTime}
             onChange={(e) => handleManualEndChange(e.target.value)}
             placeholder="2024-01-01T01:00:00Z"
-            className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs text-gray-200 outline-none"
+            className="form-input"
           />
         </div>
       </div>
 
       {!live && (
         <div className="mt-3 flex items-center gap-2">
-          <button
-            onClick={() => {
-              setPageToken(null)
-              refetch()
-            }}
-            className="rounded-md bg-gray-100 px-4 py-1.5 text-xs font-medium text-gray-900 hover:bg-gray-200"
-          >
-            Refresh
-          </button>
+          <Button onClick={() => { setPageToken(null); refetch() }} size="sm">Refresh</Button>
           {hasMore && logsData?.nextStartTime && (
-            <button
-              onClick={() => setPageToken({ startTime: logsData.nextStartTime, endTime: logsData.nextEndTime })}
-              className="rounded-md border border-gray-700 px-4 py-1.5 text-xs text-gray-300 hover:border-gray-600"
-            >
+            <Button variant="secondary" size="sm" onClick={() => setPageToken({ startTime: logsData.nextStartTime, endTime: logsData.nextEndTime })}>
               Next page
-            </button>
+            </Button>
           )}
           {pageToken && (
-            <button
-              onClick={() => setPageToken(null)}
-              className="rounded-md border border-gray-700 px-4 py-1.5 text-xs text-gray-300 hover:border-gray-600"
-            >
+            <Button variant="secondary" size="sm" onClick={() => setPageToken(null)}>
               Reset range
-            </button>
+            </Button>
           )}
-          {isFetching && <span className="text-xs text-gray-500">Loading...</span>}
+          {isFetching && <span className="text-xs text-text-muted">Loading...</span>}
         </div>
       )}
 
       <div
         id="log-container"
         onScroll={handleScroll}
-        className="mt-4 h-[600px] overflow-y-auto rounded-lg border border-gray-800 bg-gray-900 font-mono"
+        className="mt-4 h-[600px] overflow-y-auto rounded-lg border border-border bg-surface font-mono scrollbar-thin"
       >
-        <div className="sticky top-0 z-10 flex gap-3 border-b border-gray-800 bg-gray-900/95 px-4 py-2 text-[10px] font-medium uppercase tracking-wider text-gray-500 backdrop-blur">
+        <div className="sticky top-0 z-10 flex gap-5 border-b border-border bg-surface/95 px-4 py-2 text-[10px] font-medium uppercase tracking-wider text-text-muted backdrop-blur">
           <span className="w-20 shrink-0">Time</span>
           <span className="w-10 shrink-0">Level</span>
-          <span className="w-28 shrink-0">Type</span>
+          <span className="w-28 shrink-0 ml-5">Type</span>
           <span className="flex-1">Message</span>
         </div>
         <div className="p-4">
           {!resource ? (
-            <p className="text-xs text-gray-500">Select a service to view logs.</p>
+            <p className="text-xs text-text-muted">Select a service to view logs.</p>
           ) : logs.length === 0 ? (
-            <p className="text-xs text-gray-500">No logs found.</p>
+            <p className="text-xs text-text-muted">No logs found.</p>
           ) : null}
           {!paused &&
             resource &&
             logs.map((log) => {
               const levelLabel = log.labels.find((l) => l.name === 'level')?.value ?? 'info'
               const time = new Date(log.timestamp).toLocaleTimeString()
-              const badgeClass = levelClass[levelLabel] ?? levelClass.default
               return (
-                <div key={log.id} className="flex gap-3 border-b border-gray-800/50 py-1.5 text-xs hover:bg-gray-800/30">
-                  <span className="w-20 shrink-0 text-gray-500">{time}</span>
-                  <span className={`w-10 shrink-0 rounded border px-1 py-0.5 text-center text-[10px] font-medium ${badgeClass}`}>
-                    {levelLabel.toUpperCase().slice(0, 5)}
+                <div key={log.id} className="log-row gap-5">
+                  <span className="w-20 shrink-0 text-text-muted">{time}</span>
+                  <span className="w-10 shrink-0">
+                    <Badge variant={levelBadgeVariant(levelLabel)} size="sm" dot>{levelLabel.toUpperCase().slice(0, 5)}</Badge>
                   </span>
-                  <span className="w-28 shrink-0">{logTypeLabel(log)}</span>
-                  <span className="flex-1 break-all">{highlight(log.message)}</span>
+                  <span className="w-28 shrink-0 ml-5">{logTypeLabel(log)}</span>
+                  <span className="flex-1 break-all text-text-secondary">{highlight(log.message)}</span>
                 </div>
               )
             })}

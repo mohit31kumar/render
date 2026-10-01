@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
 import { get } from '../api'
+import { Card } from '../components/ui/Card'
+import { StatusIndicator } from '../components/ui/StatusIndicator'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
 
 type ConnectionStatus = { connected: boolean; message?: string }
 
@@ -15,8 +19,6 @@ export default function Settings() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaved(false)
-    // In a real implementation, this would call the backend to update the stored key.
-    // For now, we just attempt to verify it immediately.
     try {
       const result = await fetch('/api/render/connection/status', {
         method: 'POST',
@@ -32,45 +34,37 @@ export default function Settings() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-10">
-      <h2 className="text-xl font-semibold text-gray-100">Settings</h2>
-      <p className="mt-1 text-sm text-gray-400">Manage your Render API connection.</p>
+    <div className="page-container max-w-2xl">
+      <h2 className="page-title">Settings</h2>
+      <p className="page-subtitle">Manage your Render API connection.</p>
 
-      <div className="mt-6 rounded-lg border border-gray-800 bg-gray-900 p-4">
-        <h3 className="text-sm font-medium text-gray-200">API Connection</h3>
+      <Card className="mt-6">
+        <h3 className="card text-text-primary">API Connection</h3>
         <div className="mt-2 flex items-center gap-2 text-sm">
-          <span className={`h-2 w-2 rounded-full ${status?.connected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className={status?.connected ? 'text-green-400' : 'text-red-400'}>
-            {status?.connected ? 'Connected' : 'Disconnected'}
-          </span>
+          <StatusIndicator
+            status={status?.connected ? 'live' : 'failed'}
+            label={status?.connected ? 'Connected' : 'Disconnected'}
+            size="md"
+            showDot
+          />
         </div>
         {status?.message && (
-          <p className="mt-1 text-xs text-red-400">{status.message}</p>
+          <p className="mt-1 text-xs text-danger">{status.message}</p>
         )}
-      </div>
+      </Card>
 
       <form onSubmit={handleSave} className="mt-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300">Render API Key</label>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="rnd_..."
-            className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 outline-none focus:border-gray-500"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Stored server-side only. Never exposed to the browser.
-          </p>
-        </div>
-        <button
-          type="submit"
-          className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-200"
-        >
-          Verify & Save
-        </button>
+        <Input
+          label="Render API Key"
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="rnd_..."
+          hint="Stored server-side only. Never exposed to the browser."
+        />
+        <Button type="submit">Verify & Save</Button>
         {saved && status?.connected && (
-          <p className="text-sm text-green-400">API key verified successfully.</p>
+          <p className="text-sm text-success">API key verified successfully.</p>
         )}
       </form>
     </div>

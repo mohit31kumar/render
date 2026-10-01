@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { get } from '../api'
 import { Activity } from 'lucide-react'
+import { Card } from '../components/ui/Card'
+import { StatusIndicator } from '../components/ui/StatusIndicator'
 
 type Service = {
   id: string
@@ -26,6 +28,18 @@ type Service = {
 
 type ServicesResponse = Array<{ service: Service; cursor: string }>
 
+const typeLabel: Record<string, string> = {
+  web_service: 'Web Service',
+  private_service: 'Private Service',
+  background_worker: 'Worker',
+  cron_job: 'Cron Job',
+  static_site: 'Static Site',
+}
+
+const statusMap = (suspended: string): 'live' | 'suspended' => {
+  return suspended === 'not_suspended' ? 'live' : 'suspended'
+}
+
 export default function Services() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['services'],
@@ -34,52 +48,51 @@ export default function Services() {
 
   const services = data ?? []
 
-  const typeLabel: Record<string, string> = {
-    web_service: 'Web Service',
-    private_service: 'Private Service',
-    background_worker: 'Worker',
-    cron_job: 'Cron Job',
-    static_site: 'Static Site',
-  }
-
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="page-container">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-100">Services</h2>
-        <span className="text-xs text-gray-500">{services.length} total</span>
+        <h2 className="page-title">Services</h2>
+        <span className="text-xs text-text-muted">{services.length} total</span>
       </div>
 
-      {isLoading && <p className="mt-4 text-sm text-gray-400">Loading services...</p>}
-      {error && <p className="mt-4 text-sm text-red-400">Failed to load services</p>}
+      {isLoading && (
+        <div className="mt-4 space-y-2">
+          <div className="skeleton h-20 w-full" />
+          <div className="skeleton h-20 w-full" />
+          <div className="skeleton h-20 w-full" />
+        </div>
+      )}
+      {error && (
+        <div className="mt-4">
+          <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3">
+            <p className="text-sm text-danger">Failed to load services</p>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4">
         {services.map(({ service }) => (
           <Link
             key={service.id}
             to={`/services/${service.id}`}
-            className="block rounded-lg border border-gray-800 bg-gray-900 p-4 hover:border-gray-700"
+            className="card-interactive block"
           >
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-medium text-gray-100">{service.name}</h3>
-                <p className="mt-1 text-xs text-gray-500">
+                <h3 className="card text-text-primary">{service.name}</h3>
+                <p className="mt-1 text-xs text-text-muted">
                   {typeLabel[service.type] ?? service.type} · {service.serviceDetails.region ?? '—'} · {service.serviceDetails.runtime ?? '—'} · {service.serviceDetails.plan ?? '—'}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${service.suspended === 'not_suspended' ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="text-xs text-gray-400">
-                  {service.suspended === 'not_suspended' ? 'Live' : 'Suspended'}
-                </span>
-              </div>
+              <StatusIndicator status={statusMap(service.suspended)} />
             </div>
-            <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-text-muted">
               {service.serviceDetails.url && (
-                <a href={service.serviceDetails.url} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">
+                <a href={service.serviceDetails.url} target="_blank" rel="noreferrer" className="text-info hover:underline">
                   {service.serviceDetails.url}
                 </a>
               )}
-              <a href={service.dashboardUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">
+              <a href={service.dashboardUrl} target="_blank" rel="noreferrer" className="text-info hover:underline">
                 Dashboard
               </a>
               {service.branch && <span>Branch: {service.branch}</span>}

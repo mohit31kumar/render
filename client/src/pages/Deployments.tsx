@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { get } from '../api'
 import { Rocket } from 'lucide-react'
+import { Card } from '../components/ui/Card'
+import { StatusIndicator } from '../components/ui/StatusIndicator'
+import { Badge } from '../components/ui/Badge'
 
 type Deploy = {
   id: string
@@ -16,31 +19,33 @@ type Deploy = {
 
 type DeploysResponse = Array<{ deploy: Deploy; cursor: string }>
 
-const statusColor: Record<string, string> = {
-  live: 'bg-green-500',
-  build_failed: 'bg-red-500',
-  update_failed: 'bg-red-500',
-  canceled: 'bg-gray-500',
-  build_in_progress: 'bg-yellow-500',
-  update_in_progress: 'bg-yellow-500',
-  queued: 'bg-gray-400',
-  created: 'bg-gray-400',
-  pre_deploy_in_progress: 'bg-yellow-500',
-  pre_deploy_failed: 'bg-red-500',
-  deactivated: 'bg-gray-500',
+type Status = 'live' | 'suspended' | 'building' | 'failed' | 'pending' | 'unknown'
+
+const deployStatusConfig: Record<string, { status: Status; label: string }> = {
+  live: { status: 'live', label: 'Live' },
+  build_failed: { status: 'failed', label: 'Build Failed' },
+  update_failed: { status: 'failed', label: 'Update Failed' },
+  canceled: { status: 'suspended', label: 'Canceled' },
+  build_in_progress: { status: 'building', label: 'Building' },
+  update_in_progress: { status: 'building', label: 'Updating' },
+  queued: { status: 'pending', label: 'Queued' },
+  created: { status: 'pending', label: 'Created' },
+  pre_deploy_in_progress: { status: 'building', label: 'Preparing' },
+  pre_deploy_failed: { status: 'failed', label: 'Pre-Deploy Failed' },
+  deactivated: { status: 'suspended', label: 'Deactivated' },
+}
+
+const formatStatus = (status: string): string => {
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 export default function Deployments() {
-  // For MVP, show latest deploys across services.
-  // In a fuller implementation, we'd list all services then fetch deploys per service.
-  // Here we surface the most recently updated services' latest deploys.
   const { data: services } = useQuery({
     queryKey: ['services'],
     queryFn: () => get<Array<{ service: { id: string; name: string } }>>('/services', { limit: 50 }),
   })
 
   const serviceMap = new Map((services ?? []).map((s) => [s.service.id, s.service.name]))
-
   const serviceIds = (services ?? []).map((s) => s.service.id)
 
   const { data: deploysMap, isLoading } = useQuery({
@@ -68,41 +73,54 @@ export default function Deployments() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
-      <h2 className="text-xl font-semibold text-gray-100">Deployments</h2>
-      <p className="mt-1 text-xs text-gray-500">Recent deploys across all services</p>
+    <div className="page-container">
+      <h2 className="page-title">Deployments</h2>
+      <p className="page-subtitle">Recent deploys across all services</p>
 
-      {isLoading && <p className="mt-4 text-sm text-gray-400">Loading deployments...</p>}
+      {isLoading && (
+        <div className="mt-6 space-y-2">
+          <div className="skeleton h-16 w-full" />
+          <div className="skeleton h-16 w-full" />
+          <div className="skeleton h-16 w-full" />
+        </div>
+      )}
 
       <div className="mt-6 space-y-2">
         {allDeploys?.length === 0 && (
-          <p className="text-sm text-gray-500">No deployments found.</p>
+          <p className="text-sm text-text-muted">No deployments found.</p>
         )}
-        {allDeploys?.map((deploy) => (
-          <Link
-            key={`${deploy.serviceId}-${deploy.id}`}
-            to={`/deployments/${deploy.id}?serviceId=${deploy.serviceId}`}
-            className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-900 px-4 py-3 hover:border-gray-700"
-          >
-            <div className="flex items-center gap-3">
-              <span className={`h-2 w-2 rounded-full ${statusColor[deploy.status] ?? 'bg-gray-500'}`} />
-              <div>
-                <p className="text-sm text-gray-200">
-                  {deploy.serviceName ? `${deploy.serviceName} · ` : ''}#{deploy.id}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {deploy.status} · {deploy.trigger} · {new Date(deploy.createdAt).toLocaleString()}
-                </p>
-                {deploy.commit && (
-                  <p className="text-xs text-gray-500">
-                    {deploy.commit.id.slice(0, 8)} · {deploy.commit.message}
+        {allDeploys?.map((deploy) => {
+          const ds = deployStatusConfig[deploy.status]
+          return (
+            <Link
+              key={`${deploy.serviceId}-${deploy.id}`}
+              to={`/deployments/${deploy.id}?serviceId=${deploy.serviceId}`}
+              className="list-row-interactive"
+            >
+              <div className="flex items-center gap-3">
+                <StatusIndicator
+                  status={ds?.status ?? 'unknown'}
+                  label={ds?.label ?? formatStatus(deploy.status)}
+                  size="sm"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm text-text-primary truncate">
+                    {deploy.serviceName ? `${deploy.serviceName} · ` : ''}#{deploy.id}
                   </p>
-                )}
+                  <p className="text-xs text-text-muted">
+                    {deploy.trigger} · {deploy.createdAt ? new Date(deploy.createdAt).toLocaleString() : ''}
+                  </p>
+                  {deploy.commit && (
+                    <p className="text-xs text-text-muted">
+                      {deploy.commit.id.slice(0, 8)} · {deploy.commit.message}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-            <Rocket size={16} className="text-gray-500" />
-          </Link>
-        ))}
+              <Rocket size={16} className="text-text-muted shrink-0" />
+            </Link>
+          )
+        })}
       </div>
     </div>
   )

@@ -263,6 +263,7 @@ router.get('/metrics/http-latency', async (req, res: Response) => {
   const aggregationMethod = req.query.aggregationMethod
     ? String(req.query.aggregationMethod)
     : undefined
+  const quantile = req.query.quantile !== undefined ? Number(req.query.quantile) : 0.95
 
   const params: Record<string, string | number | boolean | undefined> = {}
   if (resource) params.resource = resource
@@ -270,6 +271,7 @@ router.get('/metrics/http-latency', async (req, res: Response) => {
   if (endTime) params.endTime = endTime
   if (resolutionSeconds) params.resolutionSeconds = resolutionSeconds
   if (aggregationMethod) params.aggregationMethod = aggregationMethod
+  params.quantile = quantile
 
   const data = await renderApi<unknown>(req, {
     path: '/metrics/http-latency',
