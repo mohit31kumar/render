@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/AppEntry.tsx","./src/api.ts","./src/main.tsx","./src/router.tsx","./src/pages/Dashboard.tsx","./src/pages/DeploymentDetail.tsx","./src/pages/Deployments.tsx","./src/pages/Logs.tsx","./src/pages/Metrics.tsx","./src/pages/ServiceDetail.tsx","./src/pages/Services.tsx","./src/pages/Settings.tsx"],"version":"5.6.3"}
