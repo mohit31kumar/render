@@ -43,7 +43,7 @@
 ### Required environment variables
 | Name | Value |
 |------|-------|
-| `VITE_API_URL` | `https://<your-backend-service>.onrender.com` |
+| `VITE_API_URL` | `https://<your-backend-service>.onrender.com/api/render` |
 | `VITE_WS_URL` | `https://<your-backend-service>.onrender.com` |
 | `VITE_APP_ENV` | `production` |
 
@@ -64,7 +64,7 @@ Frontend: https://render-frontend-xyz2.onrender.com
 
 Frontend API config:
 ```
-VITE_API_URL=https://render-backend-abc1.onrender.com
+VITE_API_URL=https://render-backend-abc1.onrender.com/api/render
 VITE_WS_URL=https://render-backend-abc1.onrender.com
 ```
 
