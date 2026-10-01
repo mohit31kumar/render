@@ -38,6 +38,8 @@ export default function Dashboard() {
 
   const serviceIds = (services ?? []).map((s) => s.service.id)
 
+  const serviceNameMap = new Map((services ?? []).map((s) => [s.service.id, s.service.name]))
+
   const { data: latestDeploys } = useQuery({
     queryKey: ['dashboard-deploys', serviceIds],
     queryFn: async () => {
@@ -128,7 +130,9 @@ export default function Dashboard() {
                 className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-900 px-4 py-3 hover:border-gray-700"
               >
                 <div>
-                  <p className="text-sm text-gray-200">#{deploy?.id}</p>
+                  <p className="text-sm text-gray-200">
+                    {serviceNameMap.get(serviceId) ? `${serviceNameMap.get(serviceId)} · ` : ''}#{deploy?.id}
+                  </p>
                   <p className="text-xs text-gray-500">
                     {deploy?.status} · {new Date(deploy?.createdAt ?? '').toLocaleString()}
                   </p>
@@ -158,7 +162,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm text-red-200">{deploy?.status}</p>
                   <p className="text-xs text-gray-500">
-                    #{deploy?.id} · {new Date(deploy?.createdAt ?? '').toLocaleString()}
+                    {serviceNameMap.get(serviceId) ? `${serviceNameMap.get(serviceId)} · ` : ''}#{deploy?.id} · {new Date(deploy?.createdAt ?? '').toLocaleString()}
                   </p>
                 </div>
               </Link>

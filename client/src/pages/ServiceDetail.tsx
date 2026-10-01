@@ -141,7 +141,9 @@ export default function ServiceDetail() {
           >
             <span className={`h-2 w-2 rounded-full ${statusColor[latestDeploy.status] ?? 'bg-gray-500'}`} />
             <div className="flex-1">
-              <p className="text-sm text-gray-200">#{latestDeploy.id}</p>
+              <p className="text-sm text-gray-200">
+                {service.name} · #{latestDeploy.id}
+              </p>
               <p className="text-xs text-gray-500">
                 {latestDeploy.status} · Triggered {new Date(latestDeploy.createdAt).toLocaleString()}
               </p>
@@ -164,7 +166,9 @@ export default function ServiceDetail() {
               <div className="flex items-center gap-3">
                 <span className={`h-2 w-2 rounded-full ${statusColor[deploy.status] ?? 'bg-gray-500'}`} />
                 <div>
-                  <p className="text-sm text-gray-200">{deploy.id}</p>
+                  <p className="text-sm text-gray-200">
+                    {service.name} · #{deploy.id}
+                  </p>
                   <p className="text-xs text-gray-500">
                     {deploy.status} · {deploy.trigger} · {new Date(deploy.createdAt).toLocaleString()}
                   </p>

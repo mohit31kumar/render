@@ -39,6 +39,8 @@ export default function Deployments() {
     queryFn: () => get<Array<{ service: { id: string; name: string } }>>('/services', { limit: 50 }),
   })
 
+  const serviceMap = new Map((services ?? []).map((s) => [s.service.id, s.service.name]))
+
   const serviceIds = (services ?? []).map((s) => s.service.id)
 
   const { data: deploysMap, isLoading } = useQuery({
@@ -60,6 +62,7 @@ export default function Deployments() {
       entry.deploys.map((d) => ({
         ...d.deploy,
         serviceId: entry.serviceId,
+        serviceName: serviceMap.get(entry.serviceId),
       })),
     )
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -84,7 +87,9 @@ export default function Deployments() {
             <div className="flex items-center gap-3">
               <span className={`h-2 w-2 rounded-full ${statusColor[deploy.status] ?? 'bg-gray-500'}`} />
               <div>
-                <p className="text-sm text-gray-200">#{deploy.id}</p>
+                <p className="text-sm text-gray-200">
+                  {deploy.serviceName ? `${deploy.serviceName} · ` : ''}#{deploy.id}
+                </p>
                 <p className="text-xs text-gray-500">
                   {deploy.status} · {deploy.trigger} · {new Date(deploy.createdAt).toLocaleString()}
                 </p>
