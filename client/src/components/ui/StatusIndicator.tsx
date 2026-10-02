@@ -12,7 +12,7 @@ interface StatusIndicatorProps extends HTMLAttributes<HTMLDivElement> {
 
 const statusConfig: Record<IndicatorStatus, { color: string; label: string; animated: boolean }> = {
   live: { color: 'bg-success', label: 'Live', animated: true },
-  suspended: { color: 'bg-gray-500', label: 'Suspended', animated: false },
+  suspended: { color: 'bg-text-muted', label: 'Suspended', animated: false },
   building: { color: 'bg-warning', label: 'Building', animated: true },
   failed: { color: 'bg-danger', label: 'Failed', animated: false },
   pending: { color: 'bg-warning', label: 'Pending', animated: false },

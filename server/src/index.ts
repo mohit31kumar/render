@@ -11,11 +11,11 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-app.use('/api/render', router)
-
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', env: env.nodeEnv })
+app.use('/health', (_req, res) => {
+  res.json({ status: 'ok' })
 })
+
+app.use('/api/render', router)
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err)
