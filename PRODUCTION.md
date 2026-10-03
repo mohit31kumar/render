@@ -99,28 +99,32 @@ VITE_WS_URL=https://render-backend-abc1.onrender.com
 
 ## Free-Tier Keep-Alive
 
-Render suspends free-tier web services after a period of inactivity. To keep the backend awake at no cost, a GitHub Actions workflow pings the `/health` endpoint every 5 minutes.
+Render suspends free-tier web services after a period of inactivity. The GitHub Actions workflow pings the backend `/health` endpoint every 5 minutes. If the frontend is deployed as a Render **Web Service**, the same workflow can also ping its homepage. A Render **Static Site** does not need a keep-alive ping.
 
 ### Setup
 
 1. Ensure the workflow file exists at `.github/workflows/render-keep-alive.yml`.
 2. In your GitHub repository, go to **Settings → Secrets and variables → Actions**.
-3. Create a new repository secret named `RENDER_URL`.
-4. Set its value to your backend Render service URL (e.g. `https://render-backend-abc1.onrender.com`).
-5. Do NOT include a trailing slash.
+3. Create a repository secret named `RENDER_URL` and set it to your backend Render service URL (e.g. `https://render-backend-abc1.onrender.com`). Do not include a trailing slash.
+4. If your frontend is deployed as a Render Web Service, create another repository secret named `FRONTEND_URL` and set it to the frontend service URL (e.g. `https://render-frontend-xyz2.onrender.com`), without a trailing slash. If this secret is omitted, the workflow skips the frontend ping.
 
 ### How it works
 
 - The workflow runs on a 5-minute schedule via cron (`*/5 * * * *`).
-- It executes `curl -fsS -o /dev/null "${{ secrets.RENDER_URL }}/health"`.
-- The `/health` endpoint is unauthenticated and lightweight — it returns immediately with no database or session overhead.
+- It pings `RENDER_URL/health`; the unauthenticated `/health` endpoint returns immediately with no database or session overhead.
+- When `FRONTEND_URL` is configured, it also pings the frontend homepage (`FRONTEND_URL/`).
+- It also supports manual runs from the GitHub Actions tab. GitHub may delay scheduled runs, so the five-minute interval is best-effort.
 
 ### Verification
 
 1. Open the **Actions** tab in your GitHub repository.
-2. Confirm the `Render Keep-Alive` workflow appears and runs successfully.
-3. After 15+ minutes of no other traffic, verify the Render service is still responsive:
+2. Confirm the `Render Keep-Alive` workflow appears and runs successfully. The logs show whether the frontend ping ran or was skipped.
+3. After 15+ minutes of no other traffic, verify the backend is responsive:
    ```
    curl https://<backend>/health
+   ```
+4. If the frontend is a Web Service, verify its homepage is also responsive:
+   ```
+   curl -I https://<frontend>/
    ```
 

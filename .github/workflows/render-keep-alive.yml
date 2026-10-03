@@ -11,3 +11,13 @@ jobs:
     steps:
       - name: Ping Render health endpoint
         run: curl -fsS -o /dev/null "${{ secrets.RENDER_URL }}/health"
+
+      - name: Ping frontend web service (if configured)
+        env:
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: |
+          if [ -n "$FRONTEND_URL" ]; then
+            curl -fsS -o /dev/null "$FRONTEND_URL/"
+          else
+            echo "FRONTEND_URL is not configured; skipping frontend ping."
+          fi
