@@ -193,29 +193,17 @@ npm run dev</code></pre>
             bearer token server-side.
           </p>
         </div>
-        <div class="flow">
-          <div class="flow__node">
-            <div class="flow__node-title">Browser</div>
-            <div class="flow__node-sub">React SPA</div>
-          </div>
-          <div class="flow__node flow__node--accent">
-            <div class="flow__node-title">Backend</div>
-            <div class="flow__node-sub">Express proxy · <code>RENDER_API_KEY</code></div>
-          </div>
-          <div class="flow__node">
-            <div class="flow__node-title">Render API</div>
-            <div class="flow__node-sub">api.render.com/v1</div>
-          </div>
-        </div>
-        <div class="diagram mt-2">
-          <pre><code>┌──────────┐   HTTP   ┌────────────────┐  HTTPS  ┌──────────────────┐
-│ Browser  │ ───────► │ Express backend│ ──────► │ api.render.com   │
-│ React SPA│   WS     │ /api/render/*  │  WSS    │ /logs/subscribe  │
-│          │ ───────► │ /logs/stream   │ ──────► │                  │
-└──────────┘          └────────────────┘         └──────────────────┘
-                             │
-                             └─ RENDER_API_KEY (server-side only)</code></pre>
-        </div>
+        <figure class="diagram figure">
+          <img
+            src="assets/secure_architecture.png"
+            alt="Secure architecture diagram: the browser talks to the Express backend, which proxies requests to the Render API using a server-side API key."
+            loading="lazy"
+          />
+          <figcaption>
+            The browser only ever talks to the backend. The Render API key stays
+            server-side.
+          </figcaption>
+        </figure>
         <p><a href="architecture.html">More on the architecture →</a></p>
       </section>
 

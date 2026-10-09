@@ -65,17 +65,17 @@
               <code>/api/render/*</code>. The backend attaches your Render API key as a
               bearer token and forwards the request to <code>https://api.render.com/v1</code>.
             </p>
-            <div class="diagram">
-              <pre><code>┌──────────────┐        ┌────────────────────┐        ┌────────────────────┐
-│   Browser    │  HTTP  │   Backend (Express)│  HTTPS │  Render REST API   │
-│  React SPA   │ ─────► │  /api/render/*     │ ─────► │  api.render.com/v1 │
-│              │        │                    │        │                    │
-│              │   WS   │                    │  WSS   │                    │
-│              │ ─────► │ /logs/stream       │ ─────► │ /logs/subscribe    │
-└──────────────┘        └────────────────────┘        └────────────────────┘
-                              │
-                              └─ RENDER_API_KEY (server-side only)</code></pre>
-            </div>
+            <figure class="diagram figure">
+              <img
+                src="assets/secure_architecture.png"
+                alt="Secure architecture diagram: the browser talks to the Express backend, which proxies REST and WebSocket requests to the Render API using a server-side API key."
+                loading="lazy"
+              />
+              <figcaption>
+                Browser → Express backend → Render API. The bearer token never leaves
+                the server.
+              </figcaption>
+            </figure>
             <p>
               The key is a single, centralized concern in
               <code>server/src/renderApi.ts</code>. Every route in

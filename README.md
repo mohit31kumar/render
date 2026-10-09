@@ -33,17 +33,7 @@ It is designed for developers and small teams who want a lighter-weight, read-on
 
 Render Monitor uses a proxy model so the API key never reaches the browser.
 
-```
-┌──────────────┐        ┌────────────────────┐        ┌────────────────────┐
-│   Browser    │  HTTP  │   Backend (Express)│  HTTPS │  Render REST API   │
-│  React SPA   │ ─────► │  /api/render/*     │ ─────► │  api.render.com/v1 │
-│              │        │                    │        │                    │
-│              │   WS   │                    │  WSS   │                    │
-│              │ ─────► │ /logs/stream       │ ─────► │ /logs/subscribe    │
-└──────────────┘        └────────────────────┘        └────────────────────┘
-                              │
-                              └─ RENDER_API_KEY (server-side only)
-```
+![Secure architecture diagram](docs/assets/secure_architecture.png)
 
 - Every browser request goes to the backend under `/api/render/*`.
 - The backend attaches `Authorization: Bearer <RENDER_API_KEY>` and calls Render.
