@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Render Monitor — Read-only dashboard for your Render infrastructure</title>
+    <meta
+      name="description"
+      content="Render Monitor is a self-hostable, read-only monitoring dashboard for Render. Track services, deployments, logs, and metrics without exposing your API key."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="brand" href="index.html">
+          <span class="brand__mark">RM</span>
+          <span class="brand__text">
+            <span class="brand__name">Render Monitor</span>
+            <span class="brand__tag">Read-only dashboard</span>
+          </span>
+        </a>
+        <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+        <nav class="site-nav" id="site-nav">
+          <a href="index.html" class="is-active">Home</a>
+          <a href="guide.html">Guide</a>
+          <a href="architecture.html">Architecture</a>
+          <a href="api.html">API</a>
+          <a href="deployment.html">Deployment</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero__inner">
+          <div>
+            <span class="hero__badge"><span class="dot"></span> Read-only · Self-hostable</span>
+            <h1>Render Monitor</h1>
+            <p class="hero__lead">
+              A read-only dashboard for your Render infrastructure. Track services,
+              deployments, logs, and metrics from one fast interface — while your API
+              key stays firmly server-side.
+            </p>
+            <div class="hero__actions">
+              <a class="btn btn--primary" href="guide.html">Get started →</a>
+              <a class="btn btn--secondary" href="architecture.html">How it works</a>
+            </div>
+          </div>
+          <div class="hero__panel" aria-hidden="true">
+            <div class="hero__panel-head">
+              <span class="hero__panel-dots"><span></span><span></span><span></span></span>
+              localhost:5173 — Dashboard
+            </div>
+            <pre><code>Total Services      12
+Live Services        9
+Suspended / Failed   3
+
+Latest deployments
+  web-4f5v   live      2m ago
+  api-prod   building  5m ago
+  worker-01  failed    18m ago</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats strip -->
+      <section class="section">
+        <div class="grid grid--3">
+          <div class="card stat">
+            <div class="stat__value">8</div>
+            <div class="stat__label">Pages</div>
+          </div>
+          <div class="card stat">
+            <div class="stat__value">0</div>
+            <div class="stat__label">Write operations</div>
+          </div>
+          <div class="card stat">
+            <div class="stat__value">1</div>
+            <div class="stat__label">Secret, server-side</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section class="section section--alt" id="features">
+        <div class="section__head">
+          <h2>Everything you need to watch your infrastructure</h2>
+          <p>
+            Eight focused pages covering services, deployments, logs, and metrics —
+            all reading directly from the Render API.
+          </p>
+        </div>
+        <div class="grid grid--3">
+          <article class="card card--hover feature">
+            <div class="feature__icon">◫</div>
+            <h3>Dashboard</h3>
+            <p>
+              Service counts, live/suspended status, latest deployments per service,
+              and recent build or update failures at a glance.
+            </p>
+          </article>
+          <article class="card card--hover feature">
+            <div class="feature__icon">▤</div>
+            <h3>Services</h3>
+            <p>
+              Browse web services, private services, workers, cron jobs, and static
+              sites with region, runtime, and plan.
+            </p>
+          </article>
+          <article class="card card--hover feature">
+            <div class="feature__icon">◆</div>
+            <h3>Service detail</h3>
+            <p>
+              Per-service overview, event history, and deployment timeline in one
+              place.
+            </p>
+          </article>
+          <article class="card card--hover feature">
+            <div class="feature__icon">▲</div>
+            <h3>Deployments</h3>
+            <p>
+              Recent deploys across all services with status, trigger, commit, and
+              timing information.
+            </p>
+          </article>
+          <article class="card card--hover feature">
+            <div class="feature__icon">≡</div>
+            <h3>Logs</h3>
+            <p>
+              Query historical logs with time-range presets and filters, plus a live
+              WebSocket log stream.
+            </p>
+          </article>
+          <article class="card card--hover feature">
+            <div class="feature__icon">◉</div>
+            <h3>Metrics</h3>
+            <p>
+              Charts for CPU, memory, HTTP requests and latency, bandwidth, disk
+              usage, and instance count.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Quick start -->
+      <section class="section" id="quick-start">
+        <div class="section__head">
+          <h2>Quick start</h2>
+          <p>Two terminals, a Render API key, and you're up and running locally.</p>
+        </div>
+        <div class="grid grid--2">
+          <div class="card">
+            <h3>1. Backend</h3>
+            <pre><code>cd server
+npm install
+cp .env.example .env
+# set RENDER_API_KEY in .env
+npm run dev</code></pre>
+            <p class="muted mb-0">Listens on <code>http://localhost:3001</code>.</p>
+          </div>
+          <div class="card">
+            <h3>2. Frontend</h3>
+            <pre><code>cd client
+npm install
+cp .env.example .env
+npm run dev</code></pre>
+            <p class="muted mb-0">Opens on <code>http://localhost:5173</code>.</p>
+          </div>
+        </div>
+        <div class="callout callout--success mt-2">
+          <span class="callout__icon">✓</span>
+          <div>
+            <p class="callout__title">Verify the connection</p>
+            <p>
+              Visit <code>http://localhost:3001/api/render/connection/status</code>.
+              A healthy setup returns <code>{"connected":true}</code>.
+            </p>
+          </div>
+        </div>
+        <p><a href="guide.html">Read the full setup guide →</a></p>
+      </section>
+
+      <!-- Architecture preview -->
+      <section class="section section--alt" id="architecture">
+        <div class="section__head">
+          <h2>Your API key never touches the browser</h2>
+          <p>
+            A thin backend proxies every request to the Render API and injects the
+            bearer token server-side.
+          </p>
+        </div>
+        <div class="flow">
+          <div class="flow__node">
+            <div class="flow__node-title">Browser</div>
+            <div class="flow__node-sub">React SPA</div>
+          </div>
+          <div class="flow__node flow__node--accent">
+            <div class="flow__node-title">Backend</div>
+            <div class="flow__node-sub">Express proxy · <code>RENDER_API_KEY</code></div>
+          </div>
+          <div class="flow__node">
+            <div class="flow__node-title">Render API</div>
+            <div class="flow__node-sub">api.render.com/v1</div>
+          </div>
+        </div>
+        <div class="diagram mt-2">
+          <pre><code>┌──────────┐   HTTP   ┌────────────────┐  HTTPS  ┌──────────────────┐
+│ Browser  │ ───────► │ Express backend│ ──────► │ api.render.com   │
+│ React SPA│   WS     │ /api/render/*  │  WSS    │ /logs/subscribe  │
+│          │ ───────► │ /logs/stream   │ ──────► │                  │
+└──────────┘          └────────────────┘         └──────────────────┘
+                             │
+                             └─ RENDER_API_KEY (server-side only)</code></pre>
+        </div>
+        <p><a href="architecture.html">More on the architecture →</a></p>
+      </section>
+
+      <!-- CTA -->
+      <section class="section text-center">
+        <h2>Ready to monitor your Render projects?</h2>
+        <p class="lead">Set it up locally in minutes, then deploy it to Render itself.</p>
+        <div class="hero__actions" style="justify-content: center">
+          <a class="btn btn--primary" href="guide.html">Setup guide</a>
+          <a class="btn btn--secondary" href="deployment.html">Deploy to Render</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <div>
+          <strong>Render Monitor</strong> — internal code name “Render Control Center”.
+          <br />
+          Independent project. Not affiliated with Render.
+        </div>
+        <nav class="site-footer__links">
+          <a href="index.html">Home</a>
+          <a href="guide.html">Guide</a>
+          <a href="architecture.html">Architecture</a>
+          <a href="api.html">API</a>
+          <a href="deployment.html">Deployment</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var toggle = document.querySelector('.nav-toggle');
+        var nav = document.getElementById('site-nav');
+        if (!toggle || !nav) return;
+        toggle.addEventListener('click', function () {
+          var open = nav.classList.toggle('is-open');
+          toggle.setAttribute('aria-expanded', String(open));
+        });
+      })();
+    </script>
+  </body>
+</html>

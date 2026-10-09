@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Setup Guide — Render Monitor</title>
+    <meta
+      name="description"
+      content="Step-by-step guide to running Render Monitor locally: API key, backend, frontend, environment variables, and verification."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="brand" href="index.html">
+          <span class="brand__mark">RM</span>
+          <span class="brand__text">
+            <span class="brand__name">Render Monitor</span>
+            <span class="brand__tag">Read-only dashboard</span>
+          </span>
+        </a>
+        <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+        <nav class="site-nav" id="site-nav">
+          <a href="index.html">Home</a>
+          <a href="guide.html" class="is-active">Guide</a>
+          <a href="architecture.html">Architecture</a>
+          <a href="api.html">API</a>
+          <a href="deployment.html">Deployment</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="page__header">
+        <span class="page__eyebrow">Documentation</span>
+        <h1 class="page__title">Setup guide</h1>
+        <p class="page__subtitle">
+          Get Render Monitor running on your machine in a few minutes. This guide
+          covers prerequisites, the backend, the frontend, environment variables, and
+          verification.
+        </p>
+      </div>
+
+      <div class="layout">
+        <aside class="toc">
+          <div class="toc__title">On this page</div>
+          <ul>
+            <li><a href="#prerequisites">Prerequisites</a></li>
+            <li><a href="#api-key">1. Get a Render API key</a></li>
+            <li><a href="#backend">2. Set up the backend</a></li>
+            <li><a href="#frontend">3. Set up the frontend</a></li>
+            <li><a href="#run">4. Run locally</a></li>
+            <li><a href="#verify">5. Verify</a></li>
+            <li><a href="#env">Environment variables</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+          </ul>
+        </aside>
+
+        <div class="content">
+          <section id="prerequisites">
+            <h2>Prerequisites</h2>
+            <ul>
+              <li><strong>Node.js 18+</strong> (Node 20 LTS recommended) and <strong>npm</strong>.</li>
+              <li>A <strong>Render account</strong> with at least one service.</li>
+              <li>A <strong>Render API key</strong> — created in the next step.</li>
+              <li>Git, to clone the repository.</li>
+            </ul>
+            <pre><code>git clone https://github.com/mohit31kumar/render.git
+cd render</code></pre>
+          </section>
+
+          <section id="api-key">
+            <h2>1. Get a Render API key</h2>
+            <ol>
+              <li>Sign in to <a href="https://dashboard.render.com" rel="noopener">dashboard.render.com</a>.</li>
+              <li>Open <strong>Account Settings → API Keys</strong> (or go to
+                <a href="https://dashboard.render.com/u/settings" rel="noopener">dashboard.render.com/u/settings</a>).</li>
+              <li>Create a new API key and copy it. Keys look like <code>rnd_xxxxxxxx…</code>.</li>
+            </ol>
+            <div class="callout callout--warning">
+              <span class="callout__icon">⚠</span>
+              <div>
+                <p class="callout__title">Keep the key secret</p>
+                <p>
+                  The key grants read access to your whole Render account. Never commit
+                  it and never paste it into client-side code — Render Monitor sends it
+                  to the backend only.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section id="backend">
+            <h2>2. Set up the backend</h2>
+            <p>The backend is an Express server that proxies the Render REST and WebSocket APIs.</p>
+            <pre><code>cd server
+npm install
+cp .env.example .env</code></pre>
+            <p>Edit <code>server/.env</code> and set your key:</p>
+            <pre><code>PORT=3001
+RENDER_API_KEY=rnd_your_real_key_here
+NODE_ENV=development</code></pre>
+          </section>
+
+          <section id="frontend">
+            <h2>3. Set up the frontend</h2>
+            <p>The frontend is a Vite + React SPA that talks to the backend.</p>
+            <pre><code>cd ../client
+npm install
+cp .env.example .env</code></pre>
+            <p>Point the client at the local backend in <code>client/.env</code>:</p>
+            <pre><code>VITE_API_URL=http://localhost:3001/api/render
+VITE_WS_URL=http://localhost:3001
+VITE_APP_ENV=development</code></pre>
+            <div class="callout callout--info">
+              <span class="callout__icon">ℹ</span>
+              <div>
+                <p class="callout__title">Dev proxy alternative</p>
+                <p>
+                  The Vite dev server also proxies <code>/api</code> to
+                  <code>http://localhost:3001</code>, so <code>VITE_API_URL=/api</code>
+                  works if you prefer same-origin requests during development.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section id="run">
+            <h2>4. Run locally</h2>
+            <p>Open two terminals.</p>
+            <div class="grid grid--2">
+              <div class="card">
+                <h3>Terminal A — backend</h3>
+                <pre><code>cd server
+npm run dev</code></pre>
+                <p class="muted mb-0">Serves <code>http://localhost:3001</code>.</p>
+              </div>
+              <div class="card">
+                <h3>Terminal B — frontend</h3>
+                <pre><code>cd client
+npm run dev</code></pre>
+                <p class="muted mb-0">Serves <code>http://localhost:5173</code>.</p>
+              </div>
+            </div>
+          </section>
+
+          <section id="verify">
+            <h2>5. Verify</h2>
+            <ol class="steps">
+              <li class="step">
+                <h3>Check the backend health</h3>
+                <pre><code>curl http://localhost:3001/health
+# {"status":"ok"}</code></pre>
+              </li>
+              <li class="step">
+                <h3>Check the Render connection</h3>
+                <pre><code>curl http://localhost:3001/api/render/connection/status
+# {"connected":true}</code></pre>
+                <p class="muted">
+                  A <code>{"connected":false}</code> response usually means a missing or
+                  invalid <code>RENDER_API_KEY</code>.
+                </p>
+              </li>
+              <li class="step">
+                <h3>Open the app</h3>
+                <p>
+                  Visit <code>http://localhost:5173</code>. The dashboard should load
+                  with your services and no proxy errors in the browser console.
+                </p>
+              </li>
+            </ol>
+          </section>
+
+          <section id="env">
+            <h2>Environment variables</h2>
+
+            <h3>Backend — <code>server/.env</code></h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Required</th>
+                    <th>Default</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>RENDER_API_KEY</code></td>
+                    <td><span class="badge badge--danger">Yes</span></td>
+                    <td>—</td>
+                    <td>Render API key. Server-side only.</td>
+                  </tr>
+                  <tr>
+                    <td><code>PORT</code></td>
+                    <td>No</td>
+                    <td><code>3001</code></td>
+                    <td>Port to listen on. Render injects this in production.</td>
+                  </tr>
+                  <tr>
+                    <td><code>NODE_ENV</code></td>
+                    <td>No</td>
+                    <td><code>development</code></td>
+                    <td><code>development</code> or <code>production</code>.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Frontend — <code>client/.env</code></h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Required</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>VITE_API_URL</code></td>
+                    <td><span class="badge badge--danger">Yes</span></td>
+                    <td>Backend API base, e.g. <code>https://&lt;backend&gt;.onrender.com/api/render</code>.</td>
+                  </tr>
+                  <tr>
+                    <td><code>VITE_WS_URL</code></td>
+                    <td><span class="badge badge--danger">Yes</span></td>
+                    <td>Backend origin for the log stream, e.g. <code>https://&lt;backend&gt;.onrender.com</code>.</td>
+                  </tr>
+                  <tr>
+                    <td><code>VITE_APP_ENV</code></td>
+                    <td>No</td>
+                    <td><code>development</code> or <code>production</code>.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="callout callout--warning">
+              <span class="callout__icon">⚠</span>
+              <div>
+                <p>
+                  Do not add a trailing slash to <code>VITE_API_URL</code> or
+                  <code>VITE_WS_URL</code>. Vite embeds <code>VITE_*</code> variables at
+                  build time.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section id="troubleshooting">
+            <h2>Troubleshooting</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symptom</th>
+                    <th>Likely cause &amp; fix</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>{"connected":false}</code></td>
+                    <td>Missing or invalid <code>RENDER_API_KEY</code>. Verify the key and restart the backend.</td>
+                  </tr>
+                  <tr>
+                    <td><code>Missing RENDER_API_KEY</code></td>
+                    <td>The backend can’t see the variable. Confirm <code>server/.env</code> exists and was loaded.</td>
+                  </tr>
+                  <tr>
+                    <td>429 / rate limit errors</td>
+                    <td>Too many requests to Render. Slow queries down or wait for the rate-limit window to reset.</td>
+                  </tr>
+                  <tr>
+                    <td>Logs page says “Multiple workspaces found”</td>
+                    <td>Your API key spans more than one workspace. Pass an explicit <code>ownerId</code> (see the API reference).</td>
+                  </tr>
+                  <tr>
+                    <td>Frontend shows network errors</td>
+                    <td>Backend isn’t running, or <code>VITE_API_URL</code> points to the wrong host/port.</td>
+                  </tr>
+                  <tr>
+                    <td>Log stream won’t connect</td>
+                    <td>Check <code>VITE_WS_URL</code>. It must be the backend origin, not the API path.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Still stuck? Check the <a href="api.html">API reference</a> or the
+              <a href="architecture.html">architecture overview</a>.
+            </p>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <div>
+          <strong>Render Monitor</strong> — internal code name “Render Control Center”.
+          <br />
+          Independent project. Not affiliated with Render.
+        </div>
+        <nav class="site-footer__links">
+          <a href="index.html">Home</a>
+          <a href="guide.html">Guide</a>
+          <a href="architecture.html">Architecture</a>
+          <a href="api.html">API</a>
+          <a href="deployment.html">Deployment</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var toggle = document.querySelector('.nav-toggle');
+        var nav = document.getElementById('site-nav');
+        if (!toggle || !nav) return;
+        toggle.addEventListener('click', function () {
+          var open = nav.classList.toggle('is-open');
+          toggle.setAttribute('aria-expanded', String(open));
+        });
+      })();
+    </script>
+  </body>
+</html>

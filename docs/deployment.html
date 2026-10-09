@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deployment — Render Monitor</title>
+    <meta
+      name="description"
+      content="Deploy Render Monitor to production: Render backend service, frontend static site or web service, keep-alive workflow, and troubleshooting."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="brand" href="index.html">
+          <span class="brand__mark">RM</span>
+          <span class="brand__text">
+            <span class="brand__name">Render Monitor</span>
+            <span class="brand__tag">Read-only dashboard</span>
+          </span>
+        </a>
+        <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+        <nav class="site-nav" id="site-nav">
+          <a href="index.html">Home</a>
+          <a href="guide.html">Guide</a>
+          <a href="architecture.html">Architecture</a>
+          <a href="api.html">API</a>
+          <a href="deployment.html" class="is-active">Deployment</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="page__header">
+        <span class="page__eyebrow">Documentation</span>
+        <h1 class="page__title">Deployment</h1>
+        <p class="page__subtitle">
+          Host Render Monitor on Render itself: a backend web service, a frontend
+          static site (or web service), and a GitHub Actions workflow to keep free-tier
+          services awake.
+        </p>
+      </div>
+
+      <div class="layout">
+        <aside class="toc">
+          <div class="toc__title">On this page</div>
+          <ul>
+            <li><a href="#backend">Backend service</a></li>
+            <li><a href="#frontend">Frontend</a></li>
+            <li><a href="#env">Production env vars</a></li>
+            <li><a href="#keep-alive">GitHub keep-alive</a></li>
+            <li><a href="#verify">Verification</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+          </ul>
+        </aside>
+
+        <div class="content">
+          <section id="backend">
+            <h2>Backend service</h2>
+            <p>Create a <strong>Web Service</strong> on Render pointing at the repo root.</p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setting</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Type</td><td>Web Service</td></tr>
+                  <tr><td>Runtime</td><td>Node</td></tr>
+                  <tr><td>Build Command</td><td><code>cd server &amp;&amp; npm install &amp;&amp; npm run build</code></td></tr>
+                  <tr><td>Start Command</td><td><code>node server/dist/index.js</code></td></tr>
+                  <tr><td>Health Check Path</td><td><code>/health</code></td></tr>
+                  <tr><td>Plan</td><td>Starter or higher</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="callout callout--warning">
+              <span class="callout__icon">⚠</span>
+              <div>
+                <p class="callout__title">Don’t set PORT manually</p>
+                <p>
+                  Render injects <code>PORT</code> at runtime. Setting it yourself can
+                  prevent the service from binding correctly.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section id="frontend">
+            <h2>Frontend</h2>
+            <p>You can host the frontend two ways. A Static Site is recommended.</p>
+
+            <h3>Option A — Static Site (recommended)</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setting</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Type</td><td>Static Site</td></tr>
+                  <tr><td>Build Command</td><td><code>cd client &amp;&amp; npm install &amp;&amp; npm run build</code></td></tr>
+                  <tr><td>Publish Directory</td><td><code>client/dist</code></td></tr>
+                  <tr><td>Start Command</td><td>None</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="muted">
+              <code>VITE_*</code> variables are read at build time for static sites.
+            </p>
+
+            <h3>Option B — Web Service</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setting</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Type</td><td>Web Service</td></tr>
+                  <tr><td>Runtime</td><td>Node</td></tr>
+                  <tr><td>Build Command</td><td><code>cd client &amp;&amp; npm install &amp;&amp; npm run build</code></td></tr>
+                  <tr><td>Start Command</td><td><code>cd client &amp;&amp; npm run preview</code></td></tr>
+                  <tr><td>Plan</td><td>Starter or higher</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="muted">
+              Vite preview binds to <code>PORT</code> and allows the
+              <code>.onrender.com</code> hosts configured in
+              <code>client/vite.config.ts</code>.
+            </p>
+          </section>
+
+          <section id="env">
+            <h2>Production environment variables</h2>
+
+            <h3>Backend</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>RENDER_API_KEY</code></td><td>Your Render API key (secret).</td></tr>
+                  <tr><td><code>NODE_ENV</code></td><td><code>production</code></td></tr>
+                  <tr><td><code>PORT</code></td><td>Leave unset — Render provides it.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Frontend</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>VITE_API_URL</code></td><td><code>https://&lt;backend&gt;.onrender.com/api/render</code></td></tr>
+                  <tr><td><code>VITE_WS_URL</code></td><td><code>https://&lt;backend&gt;.onrender.com</code></td></tr>
+                  <tr><td><code>VITE_APP_ENV</code></td><td><code>production</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="callout callout--info">
+              <span class="callout__icon">ℹ</span>
+              <div>
+                <p>
+                  Replace <code>&lt;backend&gt;</code> with your actual backend hostname
+                  and omit any trailing slash. Changing these variables requires a
+                  rebuild for static sites because Vite embeds them in the bundle.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section id="keep-alive">
+            <h2>GitHub keep-alive</h2>
+            <p>
+              Free-tier Render web services suspend after a period of inactivity. The
+              repository includes
+              <code>.github/workflows/render-keep-alive.yml</code>, which pings your
+              backend every five minutes.
+            </p>
+            <ol class="steps">
+              <li class="step">
+                <h3>Confirm the workflow exists</h3>
+                <p><code>.github/workflows/render-keep-alive.yml</code></p>
+              </li>
+              <li class="step">
+                <h3>Add repository secrets</h3>
+                <p>
+                  Go to <strong>Settings → Secrets and variables → Actions</strong> and
+                  create:
+                </p>
+                <ul>
+                  <li><code>RENDER_URL</code> — backend URL, e.g. <code>https://render-backend-abc1.onrender.com</code> (no trailing slash).</li>
+                  <li><code>FRONTEND_URL</code> — optional; set only if the frontend is a Web Service.</li>
+                </ul>
+              </li>
+              <li class="step">
+                <h3>Let it run</h3>
+                <p>
+                  The cron <code>*/5 * * * *</code> pings
+                  <code>$RENDER_URL/health</code>, and
+                  <code>$FRONTEND_URL/</code> when configured. You can also trigger it
+                  manually from the <strong>Actions</strong> tab.
+                </p>
+              </li>
+            </ol>
+            <div class="callout callout--warning">
+              <span class="callout__icon">⚠</span>
+              <div>
+                <p>
+                  GitHub may delay scheduled workflows under load, so the five-minute
+                  interval is best-effort. A Static Site needs no keep-alive ping.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section id="verify">
+            <h2>Verification</h2>
+            <ol class="steps">
+              <li class="step">
+                <h3>Backend health</h3>
+                <pre><code>curl https://&lt;backend&gt;/health
+# {"status":"ok"}</code></pre>
+              </li>
+              <li class="step">
+                <h3>Render connection</h3>
+                <pre><code>curl https://&lt;backend&gt;/api/render/connection/status
+# {"connected":true}</code></pre>
+              </li>
+              <li class="step">
+                <h3>Frontend</h3>
+                <p>
+                  Open <code>https://&lt;frontend&gt;/</code> and confirm the dashboard
+                  loads with no proxy or CORS errors in the console.
+                </p>
+              </li>
+              <li class="step">
+                <h3>Keep-alive</h3>
+                <p>
+                  Check the <strong>Actions</strong> tab to confirm the
+                  <em>Render Keep-Alive</em> workflow runs successfully, and that the
+                  frontend ping is either performed or intentionally skipped.
+                </p>
+              </li>
+            </ol>
+          </section>
+
+          <section id="troubleshooting">
+            <h2>Troubleshooting</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symptom</th>
+                    <th>Fix</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Frontend calls the wrong host</td>
+                    <td>Rebuild after changing <code>VITE_API_URL</code> / <code>VITE_WS_URL</code>; Vite embeds them at build time.</td>
+                  </tr>
+                  <tr>
+                    <td>CORS errors in the browser</td>
+                    <td>Confirm the backend is running and the frontend uses the backend URL, not a local path.</td>
+                  </tr>
+                  <tr>
+                    <td>Backend returns 401</td>
+                    <td><code>RENDER_API_KEY</code> is missing or wrong in the Render environment.</td>
+                  </tr>
+                  <tr>
+                    <td>Keep-alive workflow fails</td>
+                    <td><code>RENDER_URL</code> secret is missing or has a trailing slash / wrong scheme.</td>
+                  </tr>
+                  <tr>
+                    <td>Service sleeps despite the workflow</td>
+                    <td>GitHub delayed the schedule; trigger a manual run or shorten the interval.</td>
+                  </tr>
+                  <tr>
+                    <td>Web service won’t start</td>
+                    <td>Don’t set <code>PORT</code> manually; check the start command and build logs.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              See also <a href="architecture.html#considerations">security
+              considerations</a> before exposing the backend publicly.
+            </p>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <div>
+          <strong>Render Monitor</strong> — internal code name “Render Control Center”.
+          <br />
+          Independent project. Not affiliated with Render.
+        </div>
+        <nav class="site-footer__links">
+          <a href="index.html">Home</a>
+          <a href="guide.html">Guide</a>
+          <a href="architecture.html">Architecture</a>
+          <a href="api.html">API</a>
+          <a href="deployment.html">Deployment</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var toggle = document.querySelector('.nav-toggle');
+        var nav = document.getElementById('site-nav');
+        if (!toggle || !nav) return;
+        toggle.addEventListener('click', function () {
+          var open = nav.classList.toggle('is-open');
+          toggle.setAttribute('aria-expanded', String(open));
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Architecture — Render Monitor</title>
+    <meta
+      name="description"
+      content="How Render Monitor works: the Express proxy model, data flow for every feature, the tech stack, and the security considerations."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="brand" href="index.html">
+          <span class="brand__mark">RM</span>
+          <span class="brand__text">
+            <span class="brand__name">Render Monitor</span>
+            <span class="brand__tag">Read-only dashboard</span>
+          </span>
+        </a>
+        <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+        <nav class="site-nav" id="site-nav">
+          <a href="index.html">Home</a>
+          <a href="guide.html">Guide</a>
+          <a href="architecture.html" class="is-active">Architecture</a>
+          <a href="api.html">API</a>
+          <a href="deployment.html">Deployment</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="page__header">
+        <span class="page__eyebrow">Documentation</span>
+        <h1 class="page__title">Architecture</h1>
+        <p class="page__subtitle">
+          Render Monitor is a two-tier application: a React SPA and an Express
+          backend that proxies the Render API. This page explains the proxy model,
+          the data flow, and the security boundaries.
+        </p>
+      </div>
+
+      <div class="layout">
+        <aside class="toc">
+          <div class="toc__title">On this page</div>
+          <ul>
+            <li><a href="#proxy">The proxy model</a></li>
+            <li><a href="#security">Why the key stays server-side</a></li>
+            <li><a href="#data-flow">Data flow by feature</a></li>
+            <li><a href="#websocket">Log streaming</a></li>
+            <li><a href="#stack">Tech stack</a></li>
+            <li><a href="#considerations">Security considerations</a></li>
+          </ul>
+        </aside>
+
+        <div class="content">
+          <section id="proxy">
+            <h2>The proxy model</h2>
+            <p>
+              Every request from the browser is routed to the backend under
+              <code>/api/render/*</code>. The backend attaches your Render API key as a
+              bearer token and forwards the request to <code>https://api.render.com/v1</code>.
+            </p>
+            <div class="diagram">
+              <pre><code>┌──────────────┐        ┌────────────────────┐        ┌────────────────────┐
+│   Browser    │  HTTP  │   Backend (Express)│  HTTPS │  Render REST API   │
+│  React SPA   │ ─────► │  /api/render/*     │ ─────► │  api.render.com/v1 │
+│              │        │                    │        │                    │
+│              │   WS   │                    │  WSS   │                    │
+│              │ ─────► │ /logs/stream       │ ─────► │ /logs/subscribe    │
+└──────────────┘        └────────────────────┘        └────────────────────┘
+                              │
+                              └─ RENDER_API_KEY (server-side only)</code></pre>
+            </div>
+            <p>
+              The key is a single, centralized concern in
+              <code>server/src/renderApi.ts</code>. Every route in
+              <code>server/src/routes.ts</code> builds a query, delegates to
+              <code>renderApi()</code>, and returns the JSON response untouched.
+            </p>
+            <p>
+              The frontend never knows the key exists. Its only configuration is the
+              backend base URL (<code>VITE_API_URL</code>) and the WebSocket origin
+              (<code>VITE_WS_URL</code>).
+            </p>
+          </section>
+
+          <section id="security">
+            <h2>Why the API key stays server-side</h2>
+            <p>
+              A Render API key can read every service, deploy, log, and metric across
+              your account. If it were embedded in the frontend bundle, anyone who
+              opened DevTools could extract it.
+            </p>
+            <p>Render Monitor avoids that by construction:</p>
+            <ul>
+              <li>The key lives only in the backend environment as <code>RENDER_API_KEY</code>.</li>
+              <li>The browser makes requests to your own backend, never to <code>api.render.com</code>.</li>
+              <li>All responses are proxied through and sanitized by omission — the backend exposes only the endpoints it defines.</li>
+            </ul>
+            <div class="callout callout--success">
+              <span class="callout__icon">✓</span>
+              <div>
+                <p class="callout__title">Read-only by design</p>
+                <p>
+                  The route table contains only <code>GET</code> handlers. The proxy
+                  helper supports other methods, but no write route is exposed, so the
+                  dashboard cannot deploy, scale, or delete anything.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section id="data-flow">
+            <h2>Data flow by feature</h2>
+            <p>Each page maps to a small set of Render API calls:</p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th>Backend endpoint(s)</th>
+                    <th>Render API call</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Dashboard</td>
+                    <td><code>/services</code>, <code>/services/:id/deploys</code></td>
+                    <td>List services; latest deploy per service.</td>
+                  </tr>
+                  <tr>
+                    <td>Services</td>
+                    <td><code>/services</code></td>
+                    <td>List all services.</td>
+                  </tr>
+                  <tr>
+                    <td>Service detail</td>
+                    <td><code>/services/:id</code>, <code>/:id/deploys</code>, <code>/:id/events</code></td>
+                    <td>Service, deploys, and events.</td>
+                  </tr>
+                  <tr>
+                    <td>Deployments</td>
+                    <td><code>/services</code> → <code>/services/:id/deploys</code></td>
+                    <td>Fans out across services for recent deploys.</td>
+                  </tr>
+                  <tr>
+                    <td>Deployment detail</td>
+                    <td><code>/deploys/:id?serviceId=</code></td>
+                    <td>Single deploy lookup.</td>
+                  </tr>
+                  <tr>
+                    <td>Logs</td>
+                    <td><code>/logs</code>, <code>/logs/values</code>, WS <code>/logs/stream</code></td>
+                    <td>Historical log query, filter values, live subscription.</td>
+                  </tr>
+                  <tr>
+                    <td>Metrics</td>
+                    <td><code>/metrics/*</code></td>
+                    <td>Time-series metrics per resource.</td>
+                  </tr>
+                  <tr>
+                    <td>Settings</td>
+                    <td><code>/connection/status</code></td>
+                    <td>Lightweight <code>/services?limit=1</code> probe.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Workspace resolution</h3>
+            <p>
+              Log queries require an <code>ownerId</code>. When the caller doesn’t
+              provide one, the backend resolves the default workspace by calling
+              <code>/owners</code> and caches the result for the process lifetime
+              (<code>server/src/owners.ts</code>). If the key spans multiple
+              workspaces, the backend refuses to guess and asks for an explicit
+              <code>ownerId</code>.
+            </p>
+          </section>
+
+          <section id="websocket">
+            <h2>Log streaming</h2>
+            <p>
+              Live logs use a WebSocket proxied at <code>/api/render/logs/stream</code>.
+              The flow is:
+            </p>
+            <ol>
+              <li>The browser opens a WebSocket to your backend with the same query parameters as a log query.</li>
+              <li>The backend opens a connection to <code>wss://api.render.com/v1/logs/subscribe</code> with the bearer token.</li>
+              <li>Messages flow one way: Render → backend → browser. Client messages are ignored.</li>
+              <li>When Render closes the stream, the backend closes the browser socket with a normal close code.</li>
+            </ol>
+            <div class="callout callout--info">
+              <span class="callout__icon">ℹ</span>
+              <div>
+                <p>
+                  The stream is unidirectional by design — Render’s log subscription
+                  API does not accept client messages.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section id="stack">
+            <h2>Tech stack</h2>
+            <div class="grid grid--2">
+              <div class="card">
+                <h3>Frontend</h3>
+                <ul>
+                  <li>React 18 + TypeScript</li>
+                  <li>Vite build tooling</li>
+                  <li>Tailwind CSS design tokens</li>
+                  <li>TanStack Query for data fetching</li>
+                  <li>Recharts for metric charts</li>
+                  <li>React Router for navigation</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>Backend</h3>
+                <ul>
+                  <li>Node.js + Express</li>
+                  <li>TypeScript (ES modules)</li>
+                  <li><code>ws</code> for the WebSocket proxy</li>
+                  <li>Undici for outbound HTTP</li>
+                  <li><code>dotenv</code> for configuration</li>
+                  <li>CORS enabled for local development</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section id="considerations">
+            <h2>Security considerations</h2>
+            <ul>
+              <li>
+                <strong>CORS is open.</strong> The backend enables CORS for all
+                origins. If you host it publicly, restrict this to your frontend
+                origin to prevent third parties from piggybacking on your key.
+              </li>
+              <li>
+                <strong>The backend is unauthenticated.</strong> Anyone who can reach
+                it can read your Render data. Keep it private, behind your frontend
+                host, or add authentication before exposing it on the public internet.
+              </li>
+              <li>
+                <strong>Rate limits are shared.</strong> All browser users share one
+                API key, so heavy use consumes a single Render rate-limit budget. The
+                proxy surfaces rate-limit errors back to the client.
+              </li>
+              <li>
+                <strong>Error stacks are dev-only.</strong> Stack traces are included
+                in error responses only when <code>NODE_ENV=development</code>.
+              </li>
+            </ul>
+            <div class="callout callout--warning">
+              <span class="callout__icon">⚠</span>
+              <div>
+                <p>
+                  For a public deployment, add authentication in front of the backend
+                  and lock down CORS. Render Monitor is designed as a trusted internal
+                  tool.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <div>
+          <strong>Render Monitor</strong> — internal code name “Render Control Center”.
+          <br />
+          Independent project. Not affiliated with Render.
+        </div>
+        <nav class="site-footer__links">
+          <a href="index.html">Home</a>
+          <a href="guide.html">Guide</a>
+          <a href="architecture.html">Architecture</a>
+          <a href="api.html">API</a>
+          <a href="deployment.html">Deployment</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var toggle = document.querySelector('.nav-toggle');
+        var nav = document.getElementById('site-nav');
+        if (!toggle || !nav) return;
+        toggle.addEventListener('click', function () {
+          var open = nav.classList.toggle('is-open');
+          toggle.setAttribute('aria-expanded', String(open));
+        });
+      })();
+    </script>
+  </body>
+</html>
